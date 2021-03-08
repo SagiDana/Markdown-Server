@@ -8,7 +8,9 @@ setup(
     classifiers=[],
     packages=find_packages(),
     include_package_data=True,
-    install_requires=["Flask", "Markdown"],
+    install_requires=[  "Flask", 
+                        "Markdown",
+                        "py-gfm"],
     entry_points={
         "console_scripts": [
             "markdownserver=markdownserver:main",

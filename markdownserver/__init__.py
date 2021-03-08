@@ -4,7 +4,8 @@ from os import getcwd, listdir
 from flask import Flask, Response
 from os.path import isfile, join, splitext
 
-from markdown import markdown
+from markdown import markdown, Markdown
+from mdx_gfm import GithubFlavoredMarkdownExtension
 
 app = Flask(__name__)
 
@@ -20,19 +21,93 @@ def list_dir():
     return output
 
 def get_file(file_path):
-    with open(file_path) as f: return f.read()
+    with open(file_path, 'rb') as f: 
+        content = f.read()
+        content = content.decode("utf-8")
+        return content
 
+def markdown_to_html(markdown_text):
+    # html = markdown(markdown_text, 
+                    # extensions=[    'codehilite',
+                                    # GithubFlavoredMarkdownExtension()])
 
-template = """
+    # Factory-like:
+    md = Markdown(extensions=[  'codehilite',
+                                'markdown.extensions.fenced_code',
+                                GithubFlavoredMarkdownExtension() ])
+    html = md.convert(markdown_text)
+    return html
+
+import subprocess
+def markdown_file_to_html(markdown_file):
+    markdown_text = get_file(markdown_file)
+    # html = markdown_text
+    html = markdown_to_html(markdown_text)
+
+    # result = subprocess.run([   'markdown', 
+                                # markdown_file,
+                                # '-h'], 
+                            # stdout=subprocess.PIPE)
+
+    # html = result.stdout.decode("utf-8")
+
+    return html
+
+# TEMPLATE = """
+# <link rel="stylesheet" href="assets/css/markdown.css">
+# <link rel="stylesheet" href="assets/css/{1}.css">
+# <link rel="stylesheet" href="assets/css/{2}.css">
+
+# <body>
+  # <div class="markdown {2}">
+    # {0}
+  # </div>
+# </body>
+# """
+
+TEMPLATE = """
 <link rel="stylesheet" href="assets/css/markdown.css">
 <link rel="stylesheet" href="assets/css/{1}.css">
+<link rel="stylesheet" href="assets/css/{2}.css">
 
-<body>
-  <div class="markdown {1}">
+<style>
+.center{{
+    margin: auto;
+    width: 50%;
+    border: 2px solid #FFFFFA;
+    padding: 40px;
+}}
+</style>
+
+<body class="center">
+  <div class="markdown-body">
     {0}
   </div>
 </body>
 """
+def styling(html):
+    themes = [  "clearness",                # 0
+                "clearness-dark",           # 1
+                "github",                   # 2
+                "haroopad",                 # 3
+                "metro-vibes",              # 4
+                "metro-vibes-dark",         # 5
+                "node-dark",                # 6
+                "solarized-dark",           # 7
+                "solarized-light",          # 8
+                "wood",                     # 9
+                "wood-ri",                  # 10
+                "github-dark"               # 11
+                ]                          
+
+    code_themes = [ "code-vim",             # 0
+                    "code-solarized-dark",  # 1
+                    "code-monokai",         # 2
+                    ]
+
+    return TEMPLATE.format( html, 
+                            code_themes[2],
+                            themes[11])
 
 @app.route('/assets/css/<resource>')
 def assets_css(resource): 
@@ -47,24 +122,12 @@ def resource(path):
     complete_path = join(getcwd(), path)
 
     try:
-        content = get_file(complete_path)
-        html = markdown(content, 
-                        extensions=['fenced_code'])
+        html = markdown_file_to_html(complete_path)
 
-        themes = [  "clearness",
-                    "clearness-dark",
-                    "github",
-                    "haroopad",
-                    "metro-vibes",
-                    "metro-vibes-dark",
-                    "node-dark",
-                    "solarized-dark",
-                    "solarized-light",
-                    "wood",
-                    "wood-ri"]
+        html = styling(html)
 
-        return Response(template.format(html, themes[6]))
-
+        return Response(html)
+        # return Response(html, mimetype="text/markdown")
     except Exception as e:
         return Response(f"{e}")
 
